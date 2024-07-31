@@ -578,8 +578,8 @@ class Risk extends SaturneObject
         $getRisksByDangerCategoriesAndCriticality = $this->getRisksByDangerCategoriesAndCriticality($dangerCategories);
         $getRisksByDangerCategories               = $this->getRisksByDangerCategories($dangerCategories);
         $getRiskListsByDangerCategories           = $this->getRiskListsByDangerCategories($dangerCategories);
-
-        $array['graphs'] = [$getRisksByCotation, $getRisksByDangerCategoriesAndCriticality, $getRisksByDangerCategories];
+		
+		$array['graphs'] = [$getRisksByDangerCategoriesAndCriticality, $getRisksByCotation , $getRisksByDangerCategories];
         $array['lists']  = [$getRiskListsByDangerCategories];
 
         return $array;
@@ -608,8 +608,9 @@ class Risk extends SaturneObject
         $array['showlegend'] = $conf->browser->layout == 'phone' ? 1 : 2;
         $array['dataset']    = 1;
         $array['labels']     = $this->cotations;
+		$array['position']   = 2;
 
-        $riskAssessmentList = $riskAssessment->fetchAll('', '', 0, 0, ['customsql' => 'status = 1']);
+        $riskAssessmentList = $riskAssessment->fetchAll('', '', 0, 0, ['customsql' => 'status > 0']);
         $array['data']      = $riskAssessment->getRiskAssessmentCategoriesNumber($riskAssessmentList);
 
         return $array;
@@ -640,6 +641,7 @@ class Risk extends SaturneObject
         $array['dataset']    = 4;
         $array['moreCSS']    = 'grid-2';
         $array['labels']     = $this->cotations;
+		$array['position']   = 0;
 
         $join = ' LEFT JOIN ' . MAIN_DB_PREFIX . $this->table_element . ' as r ON r.rowid = t.fk_risk';
         foreach ($dangerCategories as $dangerCategory) {
@@ -679,8 +681,9 @@ class Risk extends SaturneObject
         $array['showlegend'] = 1;
         $array['dataset']    = 2;
         $array['moreCSS']    = 'grid-2';
+		$array['position']	 = 10;
 
-        $array['labels'] = [
+        $array['labels'] 	 = [
             0 => [
                 'label' => $langs->transnoentities('NumberOfRisks'),
                 'color' => '#A1467E'
