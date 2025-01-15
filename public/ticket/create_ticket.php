@@ -454,8 +454,8 @@ if ($entity > 0) {
 	print '<p><strong>' . $conf->global->DIGIRISKDOLIBARR_TICKET_PARENT_CATEGORY_LABEL . '</strong><span style="color:red"> *</span></p>';
 
 	$mainCategoryObject = $category->rechercher($conf->global->DIGIRISKDOLIBARR_TICKET_MAIN_CATEGORY, '', 'ticket', true);
-    $mainCategoryChildrenExtrafields = new StdClass();
-    $subCategoryExtrafields          = new StdClass();
+    $mainCategoryChildrenExtrafields = [];
+    $subCategoryExtrafields          = [];
     $categoryDescription             = '';
 
 	print '<div class="wpeo-gridlayout grid-3 categories-container">';
@@ -465,7 +465,7 @@ if ($entity > 0) {
 			$k = 1;
 			foreach ($mainCategoryChildren as $cat) {
 				if ($cat->id == GETPOST('parentCategory')) {
-                    $mainCategoryChildrenExtrafields = json_decode($cat->array_options['options_ticket_category_config']);
+                    $mainCategoryChildrenExtrafields = json_decode($cat->array_options['options_ticket_category_config'], true);
                     $categoryDescription             = $cat->description;
 					print '<div class="ticket-parentCategory ticket-parentCategory'. $cat->id .' active" id="' . $cat->id . '" data-rowid="' . $cat->id . '">';
 				} else {
@@ -496,7 +496,7 @@ if ($entity > 0) {
 
 					foreach ($selectedParentCategoryChildren as $subCategory) {
 						if ($subCategory->id == GETPOST('subCategory')) {
-                            $subCategoryExtrafields = json_decode($subCategory->array_options['options_ticket_category_config']);
+                            $subCategoryExtrafields = json_decode($subCategory->array_options['options_ticket_category_config'], true);
                             $categoryDescription    = $subCategory->description;
 							print '<div class="ticket-subCategory ticket-subCategory'. $subCategory->id .' center active" id="' . $subCategory->id . '" data-rowid="' . $subCategory->id . '">';
 						} else {
@@ -531,98 +531,112 @@ if ($entity > 0) {
                 <div class="form-element">
                     <span class="form-label"><?php print $langs->trans("Message"); ?><span style="color:red"> *</span></span>
                     <label class="form-field-container">
-                        <textarea name="message" id="message" required><?php echo GETPOST('message');?></textarea>
+                        <textarea name="message" id="message"
+                        required><?php echo GETPOST('message');?></textarea>
                     </label>
-                </div>
-                <div class="form-element">
-                    <?php if ($conf->global->DIGIRISKDOLIBARR_TICKET_PHOTO_VISIBLE || (!$conf->global->DIGIRISKDOLIBARR_TICKET_PHOTO_VISIBLE && $mainCategoryChildrenExtrafields->photo_visible)) {?>
-                    <div class="wpeo-gridlayout grid-2">
-                        <span class="form-label"><?php print $langs->trans("FilesLinked"); ?></span>
-                        <label class="wpeo-button button-blue" for="sendfile">
-                            <i class="fas fa-image button-icon"></i>
-                            <span class="button-label"><?php print $langs->trans('AddDocument'); ?></span>
-                            <input type="file" name="userfile[]" multiple="multiple" id="sendfile" onchange="window.digiriskdolibarr.ticket.tmpStockFile()"  style="display: none"/>
-                        </label>
-                    </div>
-
-                    <div id="sendFileForm">
-                        <div id="fileLinkedTable" class="tableforinputfields">
-                            <?php $fileLinkedList = dol_dir_list($conf->digiriskdolibarr->multidir_output[isset($conf->entity) ? $conf->entity : 1] . '/temp/ticket/' . $ticketTmpId . '/thumbs/'); ?>
-                            <div class="wpeo-table table-flex table-3 files-uploaded">
-                                <?php
-                                if ( ! empty($fileLinkedList)) {
-                                    foreach ($fileLinkedList as $fileLinked) {
-                                        if (preg_match('/mini/', $fileLinked['name'])) { ?>
-                                            <div class="table-row">
-                                                <div class="table-cell table-50 table-padding-0">
-                                                    <?php print '<img class="photo"  width="' . $maxHeight . '" src="' . DOL_URL_ROOT . '/viewimage.php?modulepart=digiriskdolibarr&entity=' . $conf->entity . '&file=' . urlencode('/temp/ticket/' . $ticketTmpId . '/thumbs/' . $fileLinked['name']) . '" title="' . dol_escape_htmltag($alt) . '">'; ?>
-                                                </div>
-                                                <div class="table-cell">
-                                                    <?php print preg_replace('/_mini/', '', $fileLinked['name']); ?>
-                                                </div>
-                                                <div class="table-cell table-50 table-end table-padding-0">
-                                                    <?php print '<div class="linked-file-delete wpeo-button button-square-50 button-transparent" value="' . $fileLinked['name'] . '"><i class="fas fa-trash button-icon"></i></div>'; ?>
-                                                </div>
-                                            </div> <?php
-                                        }
-                                    }
-                                } else {
-                                    ?>
-                                    <div class="table-row">
-                                        <div class="table-cell"><?php print $langs->trans('NoFileLinked'); ?></div>
-                                    </div>
-                                    <?php
-                                }
-                                ?>
-                            </div>
-                        </div>
-                    </div>
-                    <?php } ?>
                 </div>
                 <?php
                 if (getDolGlobalInt('DIGIRISKDOLIBARR_TICKET_EXTRAFIELDS')) {
-                    if ($conf->global->DIGIRISKDOLIBARR_TICKET_DIGIRISKELEMENT_VISIBLE || (!$conf->global->DIGIRISKDOLIBARR_TICKET_DIGIRISKELEMENT_VISIBLE && $mainCategoryChildrenExtrafields->digiriskelement_visible)) {
-                        $selectDigiriskElement = '<div class="gridw-2"><span ' . (($conf->global->DIGIRISKDOLIBARR_TICKET_DIGIRISKELEMENT_REQUIRED) ? 'style="font-weight:600"' : '') . '>' . $langs->trans('Service') . (($conf->global->DIGIRISKDOLIBARR_TICKET_DIGIRISKELEMENT_REQUIRED) ? '<span style="color:red"> *</span>' : '') . '</span>';
-
-                        $deletedElements = $digiriskelement->getMultiEntityTrashList();
-                        if (empty($deletedElements)) {
-                            $deletedElements = [0];
-                        }
-                        $selectDigiriskElement .= $digiriskelement->selectDigiriskElementList(GETPOST('options_digiriskdolibarr_ticket_service'), 'options_digiriskdolibarr_ticket_service',  ['customsql' => 't.rowid NOT IN (' . implode(',', $deletedElements) . ') AND t.show_in_selector = 1'], $langs->trans('PleaseSelectADigiriskElement'), 0, array(), 0, 0, 'minwidth500', 0, false, 1, '', true, $conf->global->DIGIRISKDOLIBARR_TICKET_DIGIRISKELEMENT_HIDE_REF);
-                        $selectDigiriskElement .= '</div>';
-                        print($selectDigiriskElement);
+                    if (!empty($subCategoryExtrafields)) {
+                        $config = $subCategoryExtrafields;
+                    } else if (!empty($mainCategoryChildren)) {
+                        $config = $mainCategoryChildren;
+                    } else {
+                        $confName = strtoupper($moduleName) . '_PUBLIC_INTERFACE_TICKET_CONFIG';
+                        $config   = json_decode(dolibarr_get_const($db, $confName, $conf->entity), true) ?? ['digiriskdolibarr_ticket_photo' => ['position' => 0], 'digiriskdolibarr_ticket_digiriskelement' => ['position' => 1], 'digiriskdolibarr_ticket_lastname' => ['position' => 2], 'digiriskdolibarr_ticket_firstname' => ['position' => 3], 'digiriskdolibarr_ticket_phone' => ['position' => 4], 'digiriskdolibarr_ticket_location' => ['position' => 5], 'digiriskdolibarr_ticket_date' => ['position' => 6], 'digiriskdolibarr_ticket_email' => ['position' => 7]];
                     }
 
-                    $fields = [
+                    $extrafields->attributes[$object->table_element]['label']['digiriskdolibarr_ticket_digiriskelement'] = $langs->transnoentities('Service');
+                    $extrafields->attributes[$object->table_element]['label']['digiriskdolibarr_ticket_email'] = $langs->transnoentities('Email');
+                    $extrafields->attributes[$object->table_element]['label']['digiriskdolibarr_ticket_photo'] = $langs->transnoentities('FilesLinked');
+                    unset($extrafields->attributes[$object->table_element]['label']['digiriskdolibarr_ticket_service']);
+
+                    uksort($extrafields->attributes['ticket']['label'], function ($a, $b) use ($config) {
+                        return $config[$a]['position'] <=> $config[$b]['position'];
+                    });
+
+                    $fieldsTypes = [
                         'digiriskdolibarr_ticket_email' => ['type' => 'email', 'name' => 'email'],
                         'digiriskdolibarr_ticket_date'  => ['type' => 'datetime-local']
                     ];
-                    $extrafields->attributes[$object->table_element]['label']['digiriskdolibarr_ticket_email']     = $langs->trans('Email');
-                    unset($extrafields->attributes[$object->table_element]['label']['digiriskdolibarr_ticket_service']);
+
                     foreach ($extrafields->attributes[$object->table_element]['label'] as $key => $field) {
+
                         if (strpos($key, 'digiriskdolibarr_ticket') === false) {
-                            continue; // Goes to the next element if ‘digiriskdolibarr_ticket’ is not found
+                            continue;
                         }
-                        $visible = getDolGlobalInt(dol_strtoupper($key) . '_VISIBLE') || (!getDolGlobalInt(dol_strtoupper($key) . '_VISIBLE') && $mainCategoryChildrenExtrafields->{$key . '_visible'})
-                        || (!getDolGlobalInt(dol_strtoupper($key) . '_VISIBLE') && $mainCategoryChildrenExtrafields->{$key . '_visible'} == NUll && $subCategoryExtrafields->{$key . '_visible'});
-                        $required = getDolGlobalInt(dol_strtoupper($key) . '_REQUIRED') || (!getDolGlobalInt(dol_strtoupper($key) . '_REQUIRED') && $mainCategoryChildrenExtrafields->{$key . '_required'})
-                        || (!getDolGlobalInt(dol_strtoupper($key) . '_REQUIRED') && $mainCategoryChildrenExtrafields->{$key . '_required'} == NUll && $subCategoryExtrafields->{$key . '_required'});
-                        if ($visible) {
-                            $out  = '<div class="form-element form-field-container">';
-                            $out .= '<label><span class="form-label"' . ($required ? '' : 'style="font-weight:300"') . '>' . $field . ($required ? '<span style="color:red"> *</span>' : '') . '</span>';
-                            if ($key == 'digiriskdolibarr_ticket_email' || $key == 'digiriskdolibarr_ticket_date') {
-                                $out .= '<input type="' . $fields[$key]['type'] . '" name="' . ($fields[$key]['name'] ?? 'options_' . $key) . '" id="' . ($fields[$key]['name'] ?? 'options_' . $key) . '" value="' . GETPOST($fields[$key]['name'] ?? 'options_' . $key) . '"' . ($required ? 'required' : '') . '/>';
-                            } else {
-                                $out .= $extrafields->showInputField($key, GETPOST($fields[$key]['name'] ?? 'options_' . $key), ($required ? 'required' : ''), '', '', 0, $object->id, $object->table_element);
+
+                        $visible = getDolGlobalInt(dol_strtoupper($key) . '_VISIBLE') || !empty($mainCategoryChildrenExtrafields[$key]['visible']) || !empty($subCategoryExtrafields[$key]['visible']);
+                        $required = getDolGlobalInt(dol_strtoupper($key) . '_REQUIRED') || !empty($mainCategoryChildrenExtrafields[$key]['required']) || !empty($subCategoryExtrafields[$key]['required']);
+
+                        if (!$visible) {
+                            continue;
+                        }
+
+                        if (strpos($key, 'digiriskelement') !== false) {
+                            print '<div class="gridw-2">';
+                        } else {
+                            print '<div class="form-element">';
+                        }
+
+                        if (strpos($key, 'photo') !== false) {
+                            print '<div class="wpeo-gridlayout grid-2">';
+                                print '<span class="form-label">' . $langs->trans("FilesLinked") . '</span>';
+                                print '<label class="wpeo-button button-blue" for="sendfile">';
+                                    print '<i class="fas fa-image button-icon"></i>';
+                                    print '<span class="button-label">' . $langs->trans('AddDocument') . '</span>';
+                                    print '<input type="file" name="userfile[]" multiple="multiple" id="sendfile" onchange="window.digiriskdolibarr.ticket.tmpStockFile()"  style="display: none"/>';
+                                print '</label>';
+                            print '</div>';
+
+                            print '<div id="sendFileForm">';
+                                print '<div id="fileLinkedTable" class="tableforinputfields">';
+                                $fileLinkedList = dol_dir_list($conf->digiriskdolibarr->multidir_output[isset($conf->entity) ? $conf->entity : 1] . '/temp/ticket/' . $ticketTmpId . '/thumbs/');
+                                print '<div class="wpeo-table table-flex table-3 files-uploaded">';
+                                if (!empty($fileLinkedList)) {
+                                    foreach ($fileLinkedList as $fileLinked) {
+                                        if (preg_match('/mini/', $fileLinked['name'])) {
+                                            print '<div class="table-row">';
+                                                print '<div class="table-cell table-50 table-padding-0">';
+                                                    print '<img class="photo"  width="' . $maxHeight . '" src="' . DOL_URL_ROOT . '/viewimage.php?modulepart=digiriskdolibarr&entity=' . $conf->entity . '&file=' . urlencode('/temp/ticket/' . $ticketTmpId . '/thumbs/' . $fileLinked['name']) . '" title="' . dol_escape_htmltag($alt) . '">';
+                                                print '</div>';
+                                                print '<div class="table-cell">';
+                                                    print preg_replace('/_mini/', '', $fileLinked['name']);
+                                                print '</div>';
+                                                print '<div class="table-cell table-50 table-end table-padding-0">';
+                                                    print '<div class="linked-file-delete wpeo-button button-square-50 button-transparent" value="' . $fileLinked['name'] . '"><i class="fas fa-trash button-icon"></i></div>';
+                                                print '</div>';
+                                            print '</div>';
+                                        }
+                                    }
+                                } else {
+                                    print '<div class="table-row">';
+                                        print '<div class="table-cell">' . $langs->trans('NoFileLinked') . '</div>';
+                                    print '</div>';
+                                }
+                                print '</div></div>';
+                            print '</div>';
+                        } elseif (strpos($key, 'digiriskelement') !== false) {
+                            print '<span ' . (($conf->global->DIGIRISKDOLIBARR_TICKET_DIGIRISKELEMENT_REQUIRED) ? 'style="font-weight:600"' : '') . '>' . $langs->trans('Service') . (($conf->global->DIGIRISKDOLIBARR_TICKET_DIGIRISKELEMENT_REQUIRED) ? '<span style="color:red"> *</span>' : '') . '</span>';
+
+                            $deletedElements = $digiriskelement->getMultiEntityTrashList();
+                            if (empty($deletedElements)) {
+                                $deletedElements = [0];
                             }
-                            $out .= '</label>';
-                            $out .= '</div>';
-                            print($out);
+                            print $digiriskelement->selectDigiriskElementList(GETPOST('options_digiriskdolibarr_ticket_service'), 'options_digiriskdolibarr_ticket_service',  ['customsql' => 't.rowid NOT IN (' . implode(',', $deletedElements) . ') AND t.show_in_selector = 1'], $langs->trans('PleaseSelectADigiriskElement'), 0, array(), 0, 0, 'minwidth500', 0, false, 1, '', true, $conf->global->DIGIRISKDOLIBARR_TICKET_DIGIRISKELEMENT_HIDE_REF);
+                        } else {
+                            print '<label><span class="form-label"' . ($required ? '' : 'style="font-weight:300"') . '>' . $field . ($required ? '<span style="color:red"> *</span>' : '') . '</span>';
+                            if ($key == 'digiriskdolibarr_ticket_email' || $key == 'digiriskdolibarr_ticket_date') {
+                                print '<input type="' . $fieldsTypes[$key]['type'] . '" name="' . ($fieldsTypes[$key]['name'] ?? 'options_' . $key) . '" id="' . ($fieldsTypes[$key]['name'] ?? 'options_' . $key) . '" value="' . GETPOST($fieldsTypes[$key]['name'] ?? 'options_' . $key) . '"' . ($required ? 'required' : '') . '/>';
+                            } else {
+                                print $extrafields->showInputField($key, GETPOST($fieldsTypes[$key]['name'] ?? 'options_' . $key), ($required ? 'required' : ''), '', '', 0, $object->id, $object->table_element);
+                            }
                         }
+                        print '</div>';
                     }
                 }
-            print '</div>';
-            if (!empty($conf->global->DIGIRISKDOLIBARR_USE_CAPTCHA)) {
+        print '</div>';
+        if (!empty($conf->global->DIGIRISKDOLIBARR_USE_CAPTCHA)) {
                 require_once DOL_DOCUMENT_ROOT . '/core/lib/security2.lib.php';
                 print '<div class="center"><label for="email"><span class="fieldrequired">' . $langs->trans("SecurityCode") . '</span><span style="color:red"> *</span></label>';
                 print '<span class="span-icon-security inline-block">';
@@ -637,8 +651,8 @@ if ($entity > 0) {
         print '</div>';
         print dol_get_fiche_end();
 
-        $visible = getDolGlobalInt('DIGIRISKDOLIBARR_TICKET_PUBLIC_INTERFACE_USE_SIGNATORY') || (!getDolGlobalInt('DIGIRISKDOLIBARR_TICKET_PUBLIC_INTERFACE_USE_SIGNATORY') && $mainCategoryChildrenExtrafields->use_signatory)
-        || (!getDolGlobalInt('DIGIRISKDOLIBARR_TICKET_PUBLIC_INTERFACE_USE_SIGNATORY') && $mainCategoryChildrenExtrafields->use_signatory && $subCategoryExtrafields->use_signatory);
+        $visible = getDolGlobalInt('DIGIRISKDOLIBARR_TICKET_PUBLIC_INTERFACE_USE_SIGNATORY') || (!getDolGlobalInt('DIGIRISKDOLIBARR_TICKET_PUBLIC_INTERFACE_USE_SIGNATORY') && $mainCategoryChildrenExtrafields['use_signatory'])
+        || (!getDolGlobalInt('DIGIRISKDOLIBARR_TICKET_PUBLIC_INTERFACE_USE_SIGNATORY') && $mainCategoryChildrenExtrafields['use_signatory'] && $subCategoryExtrafields['use_signatory']);
         if ($visible) {
             // Load Saturne libraries
             require_once __DIR__ . '/../../../saturne/lib/saturne_functions.lib.php';
